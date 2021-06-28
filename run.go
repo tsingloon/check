@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"runtime"
 	"sync"
 	"testing"
 	"time"
@@ -45,6 +46,7 @@ var (
 	newWorkFlag    = flag.Bool("check.work", false, "Display and do not remove the test working directory")
 	newSParallFlag = flag.Bool("check.sparall", false, "Run suits parallel")
 	newParallFlag  = flag.Bool("check.parall", false, "Run test parallel in suit")
+	newNumFlag     = flag.Int("check.core", 1, "Run suits core parallel")
 )
 
 // TestingT runs all test suites registered with the Suite function,
@@ -87,8 +89,9 @@ func RunAll(runConf *RunConf) *Result {
 	if *newSParallFlag {
 		fmt.Printf("newSParallFlag is %v", *newSParallFlag)
 		wg := sync.WaitGroup{}
+		runtime.GOMAXPROCS(*newNumFlag)
+		wg.Add(len(allSuites))
 		for _, suite := range allSuites {
-			wg.Add(1)
 			go func(suite interface{}, ) {
 				result.Add(Run(suite, runConf))
 			}(suite)
