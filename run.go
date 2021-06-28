@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"sync"
 	"testing"
 	"time"
 )
@@ -42,6 +43,8 @@ var (
 	newBenchMem    = flag.Bool("check.bmem", false, "Report memory benchmarks")
 	newListFlag    = flag.Bool("check.list", false, "List the names of all tests that will be run")
 	newWorkFlag    = flag.Bool("check.work", false, "Display and do not remove the test working directory")
+	newSParallFlag = flag.Bool("check.sparall", false, "Run suits parallel")
+	newParallFlag  = flag.Bool("check.parall", false, "Run test parallel in suit")
 )
 
 // TestingT runs all test suites registered with the Suite function,
@@ -77,11 +80,23 @@ func TestingT(testingT *testing.T) {
 }
 
 // RunAll runs all test suites registered with the Suite function, using the
-// provided run configuration.
+// provided run configuration; if check.sparall is true, then run testSuits parallel.
 func RunAll(runConf *RunConf) *Result {
 	result := Result{}
-	for _, suite := range allSuites {
-		result.Add(Run(suite, runConf))
+
+	if *newSParallFlag {
+		wg := sync.WaitGroup{}
+		for _, suite := range allSuites {
+			wg.Add(1)
+			go func(suite interface{}, ) {
+				result.Add(Run(suite, runConf))
+			}(suite)
+		}
+		wg.Wait()
+	} else {
+		for _, suite := range allSuites {
+			result.Add(Run(suite, runConf))
+		}
 	}
 	return &result
 }

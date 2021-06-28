@@ -614,11 +614,25 @@ func (runner *suiteRunner) run() *Result {
 		if runner.checkFixtureArgs() {
 			c := runner.runFixture(runner.setUpSuite, "", nil)
 			if c == nil || c.status() == succeededSt {
-				for i := 0; i != len(runner.tests); i++ {
-					c := runner.runTest(runner.tests[i])
-					if c.status() == fixturePanickedSt {
-						runner.skipTests(missedSt, runner.tests[i+1:])
-						break
+				if *newParallFlag {
+					wg := sync.WaitGroup{}
+					for i := 0; i != len(runner.tests); i++ {
+						wg.Add(1)
+						go func(i int) {
+							c := runner.runTest(runner.tests[i])
+							if c.status() == fixturePanickedSt {
+								runner.skipTests(missedSt, runner.tests[i+1:])
+							}
+						}(i)
+					}
+					wg.Wait()
+				} else {
+					for i := 0; i != len(runner.tests); i++ {
+						c := runner.runTest(runner.tests[i])
+						if c.status() == fixturePanickedSt {
+							runner.skipTests(missedSt, runner.tests[i+1:])
+							break
+						}
 					}
 				}
 			} else if c != nil && c.status() == skippedSt {
